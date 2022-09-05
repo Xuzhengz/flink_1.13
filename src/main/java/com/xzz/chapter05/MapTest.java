@@ -155,14 +155,14 @@ public class MapTest {
 //
 //        watermarkMonotonous.print();
 
-//        SingleOutputStreamOperator<Event> boundWater = inputStream.assignTimestampsAndWatermarks(WatermarkStrategy.<Event>forBoundedOutOfOrderness(Duration.ofSeconds(2)).withTimestampAssigner(new SerializableTimestampAssigner<Event>() {
-//            @Override
-//            public long extractTimestamp(Event event, long l) {
-//                return event.getTimestamp();
-//            }
-//        }));
+        SingleOutputStreamOperator<Event> boundWater = inputStream.assignTimestampsAndWatermarks(WatermarkStrategy.<Event>forBoundedOutOfOrderness(Duration.ofSeconds(2)).withTimestampAssigner(new SerializableTimestampAssigner<Event>() {
+            @Override
+            public long extractTimestamp(Event event, long l) {
+                return event.getTimestamp();
+            }
+        }));
 
-//        boundWater.print();
+        boundWater.print();
 
 
         env.execute();
