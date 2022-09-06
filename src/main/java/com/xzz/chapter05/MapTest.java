@@ -153,6 +153,7 @@ public class MapTest {
             }
         }));
 
+
         watermarkMonotonous.print();
 
         SingleOutputStreamOperator<Event> boundWater = inputStream.assignTimestampsAndWatermarks(WatermarkStrategy.<Event>forBoundedOutOfOrderness(Duration.ofSeconds(2)).withTimestampAssigner(new SerializableTimestampAssigner<Event>() {
