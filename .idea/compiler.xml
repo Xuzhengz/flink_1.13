@@ -10,8 +10,5 @@
         <module name="flink_1.13" />
       </profile>
     </annotationProcessing>
-    <bytecodeTargetLevel>
-      <module name="flink_1.13" target="1.8" />
-    </bytecodeTargetLevel>
   </component>
 </project>
