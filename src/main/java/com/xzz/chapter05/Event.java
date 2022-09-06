@@ -9,6 +9,10 @@ public class Event {
     private String url;
     private Long timestamp;
 
+
+
+
+
     public Event() {
     }
 
