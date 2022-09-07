@@ -27,7 +27,8 @@ public class WatermarkAndWindow {
 
         SingleOutputStreamOperator<UserBehavior> userBehaviorWatermarkStream = userBehaviorStream.assignTimestampsAndWatermarks(new CustomWatermark());
 
-        userBehaviorWatermarkStream.print();
+//        userBehaviorWatermarkStream.print();
+
 
         env.execute();
     }
