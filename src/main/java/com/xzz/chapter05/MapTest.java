@@ -146,24 +146,28 @@ public class MapTest {
         /**
          * 水位线产生
          */
-        SingleOutputStreamOperator<Event> watermarkMonotonous = inputStream.assignTimestampsAndWatermarks(WatermarkStrategy.<Event>forMonotonousTimestamps().withTimestampAssigner(new SerializableTimestampAssigner<Event>() {
-            @Override
-            public long extractTimestamp(Event event, long l) {
-                return event.getTimestamp();
-            }
-        }));
+//        SingleOutputStreamOperator<Event> watermarkMonotonous = inputStream.assignTimestampsAndWatermarks(WatermarkStrategy.<Event>forMonotonousTimestamps().withTimestampAssigner(new SerializableTimestampAssigner<Event>() {
+//            @Override
+//            public long extractTimestamp(Event event, long l) {
+//                return event.getTimestamp();
+//            }
+//        }));
+//
+//
+//        watermarkMonotonous.print();
+
+//        SingleOutputStreamOperator<Event> boundWater = inputStream.assignTimestampsAndWatermarks(WatermarkStrategy.<Event>forBoundedOutOfOrderness(Duration.ofSeconds(2)).withTimestampAssigner(new SerializableTimestampAssigner<Event>() {
+//            @Override
+//            public long extractTimestamp(Event event, long l) {
+//                return event.getTimestamp();
+//            }
+//        }));
+//
+//        boundWater.print();
+
+//        自定义生成水位线
 
 
-        watermarkMonotonous.print();
-
-        SingleOutputStreamOperator<Event> boundWater = inputStream.assignTimestampsAndWatermarks(WatermarkStrategy.<Event>forBoundedOutOfOrderness(Duration.ofSeconds(2)).withTimestampAssigner(new SerializableTimestampAssigner<Event>() {
-            @Override
-            public long extractTimestamp(Event event, long l) {
-                return event.getTimestamp();
-            }
-        }));
-
-        boundWater.print();
 
 
         env.execute();
