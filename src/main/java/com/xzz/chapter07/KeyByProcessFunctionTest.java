@@ -48,7 +48,6 @@ public class KeyByProcessFunctionTest {
 
                         //注册10S后的定时器
                         context.timerService().registerProcessingTimeTimer(context.timerService().currentProcessingTime() + 10 * 1000L);
-
                     }
                     @Override
                     public void onTimer(long timestamp, OnTimerContext ctx, Collector<String> out) throws Exception {
