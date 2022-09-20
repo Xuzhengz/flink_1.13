@@ -25,38 +25,30 @@ public class KeyByProcessFunctionTest {
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
         env.setParallelism(1);
 
-        URL resourceAsStream = ClassLoader.getSystemClassLoader().getResource("UserBehavior.csv");
+        DataStreamSource<Event> eventDataStreamSource = env.addSource(new CustomSource());
 
-        DataStreamSource<String> inputStream = env.socketTextStream("hadoop102", 7777);
-
-//        DataStreamSource<String> inputStream = env.readTextFile(resourceAsStream.getPath());
-
-        SingleOutputStreamOperator<UserBehavior> userBehaviorStream = inputStream.map(line -> {
-            String[] fields = line.split(",");
-            return new UserBehavior(new Long(fields[0]), new Long(fields[1]), new Long(fields[2]), fields[3], System.currentTimeMillis());
-        }).assignTimestampsAndWatermarks(WatermarkStrategy.<UserBehavior>forBoundedOutOfOrderness(Duration.ZERO).withTimestampAssigner(new SerializableTimestampAssigner<UserBehavior>() {
+        SingleOutputStreamOperator<Event> eventWatermarkStream = eventDataStreamSource.assignTimestampsAndWatermarks(WatermarkStrategy.<Event>forBoundedOutOfOrderness(Duration.ZERO).withTimestampAssigner(new SerializableTimestampAssigner<Event>() {
             @Override
-            public long extractTimestamp(UserBehavior userBehavior, long l) {
-                return userBehavior.getTimestamp();
+            public long extractTimestamp(Event event, long l) {
+                return event.getTimestamp();
             }
         }));
 
-        userBehaviorStream.keyBy(data -> true)
-                .process(new KeyedProcessFunction<Boolean, UserBehavior, String>() {
+        eventWatermarkStream.keyBy(data -> true)
+                .process(new KeyedProcessFunction<Boolean, Event, String>() {
                     @Override
-                    public void processElement(UserBehavior value, Context ctx, Collector<String> out) throws Exception {
-                        Long currTs = ctx.timerService().currentProcessingTime();
-                        out.collect("数据到达，到达时间：" + new Timestamp(currTs));
-                        // 注册一个 10 秒后的定时器
-                        ctx.timerService().registerProcessingTimeTimer(currTs + 10 * 1000L);
+                    public void processElement(Event event, Context context, Collector<String> collector) throws Exception {
+                        System.out.println("时间戳：" + context.timestamp());
+                        System.out.println("水位线：" + context.timerService().currentWatermark());
+
+                        context.timerService().registerEventTimeTimer(context.timestamp() + 3 * 1000L);
                     }
 
                     @Override
                     public void onTimer(long timestamp, OnTimerContext ctx, Collector<String> out) throws Exception {
-                        out.collect(ctx.getCurrentKey().toString());
+                        System.out.println("定时器触发，当前Key：" + ctx.getCurrentKey());
                     }
-                })
-                .print();
+                }).print("事件触发定时器：");
 
 
         env.execute();
