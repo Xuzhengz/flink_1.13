@@ -9,6 +9,7 @@ import org.apache.flink.api.common.functions.FlatMapFunction;
 import org.apache.flink.api.common.functions.ReduceFunction;
 import org.apache.flink.api.common.functions.RichFlatMapFunction;
 import org.apache.flink.api.common.state.*;
+import org.apache.flink.api.common.time.Time;
 import org.apache.flink.api.common.typeinfo.Types;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.tuple.Tuple3;
@@ -26,6 +27,7 @@ import org.junit.jupiter.api.Test;
 
 import javax.xml.crypto.Data;
 import java.lang.reflect.Type;
+import java.sql.Timestamp;
 import java.time.Duration;
 import java.util.List;
 
@@ -82,6 +84,10 @@ public class KeyedStateTest {
 
     }
 
+
+    /**
+     * 列表状态案例：模拟sql联表查询
+     */
     @Test
     public void test3() throws Exception {
         SingleOutputStreamOperator<Tuple3<String, String, Long>> stream1 = env.fromElements(Tuple3.of("a", "stream-1", 1000L), Tuple3.of("b", "stream-1", 2000L))
@@ -120,7 +126,7 @@ public class KeyedStateTest {
                         for (Tuple2<String, Long> list2 : listState2.get()) {
                             collector.collect(stringStringLongTuple3 + "=>" + list2);
                         }
-                        listState1.add(Tuple2.of(stringStringLongTuple3.f0,stringStringLongTuple3.f2));
+                        listState1.add(Tuple2.of(stringStringLongTuple3.f0, stringStringLongTuple3.f2));
                     }
 
                     @Override
@@ -128,7 +134,7 @@ public class KeyedStateTest {
                         for (Tuple2<String, Long> list1 : listState1.get()) {
                             collector.collect(stringStringLongTuple3 + "=>" + list1);
                         }
-                        listState2.add(Tuple2.of(stringStringLongTuple3.f0,stringStringLongTuple3.f2));
+                        listState2.add(Tuple2.of(stringStringLongTuple3.f0, stringStringLongTuple3.f2));
 
                     }
                 }).print("connect：");
@@ -138,8 +144,85 @@ public class KeyedStateTest {
     }
 
     /**
-     * 列表状态案例：
+     * 映射状态案例：滚动窗口
      */
+    @Test
+    public void test4() throws Exception {
+        stream.print();
+
+        stream.keyBy(data -> data.getUrl())
+                .process(new FakeWindow(10000L))
+                .print();
+
+
+        env.execute();
+    }
+
+    /**
+     * 规约状态案例：平均时间戳的统计
+     */
+    @Test
+    public void test5() throws Exception {
+
+        stream.keyBy(data -> data.getUser())
+                .flatMap(new RichFlatMapFunction<Event, String>() {
+                    AggregatingState<Event, Long> aggregatingState = null;
+                    Long count;
+                    ValueState<Long> valueState = null;
+
+                    @Override
+                    public void open(Configuration parameters) throws Exception {
+                        aggregatingState = getRuntimeContext().getAggregatingState(new AggregatingStateDescriptor<Event, Tuple2<Long, Long>, Long>("agg", new AggregateFunction<Event, Tuple2<Long, Long>, Long>() {
+                            @Override
+                            public Tuple2<Long, Long> createAccumulator() {
+                                return Tuple2.of(0L, 0L);
+                            }
+
+                            @Override
+                            public Tuple2<Long, Long> add(Event event, Tuple2<Long, Long> longLongTuple2) {
+                                return Tuple2.of(longLongTuple2.f0 + event.getTimestamp(), longLongTuple2.f1 + 1);
+                            }
+
+                            @Override
+                            public Long getResult(Tuple2<Long, Long> longLongTuple2) {
+                                return longLongTuple2.f0 / longLongTuple2.f1;
+                            }
+
+                            @Override
+                            public Tuple2<Long, Long> merge(Tuple2<Long, Long> longLongTuple2, Tuple2<Long, Long> acc1) {
+                                return null;
+                            }
+                        }, Types.TUPLE(Types.LONG, Types.LONG)));
+
+                        valueState = getRuntimeContext().getState(new ValueStateDescriptor<Long>("value", Long.class));
+                    }
+
+                    @Override
+                    public void flatMap(Event event, Collector<String> collector) throws Exception {
+                        Long currentCount = valueState.value();
+
+                        if (currentCount == null) {
+                            currentCount = 1L;
+                        } else {
+                            currentCount++;
+                        }
+
+
+                        valueState.update(currentCount);
+                        aggregatingState.add(event);
+
+                        if (currentCount.equals(count)){
+                            collector.collect(event.getUser() + "过去：");
+                        }
+
+
+                    }
+                }).print();
+
+
+        env.execute();
+
+    }
 
 
     private class MyFlatMap extends RichFlatMapFunction<Event, String> {
@@ -152,7 +235,8 @@ public class KeyedStateTest {
 
         @Override
         public void open(Configuration parameters) throws Exception {
-            valueState = getRuntimeContext().getState(new ValueStateDescriptor<Event>("myValueState", Event.class));
+            ValueStateDescriptor<Event> myValueState = new ValueStateDescriptor<>("myValueState", Event.class);
+            valueState = getRuntimeContext().getState(myValueState);
             listState = getRuntimeContext().getListState(new ListStateDescriptor<Event>("myListState", Event.class));
             mapState = getRuntimeContext().getMapState(new MapStateDescriptor<String, Long>("myMapState", String.class, Long.class));
             reducingState = getRuntimeContext().getReducingState(new ReducingStateDescriptor<Event>("myReducingState", new ReduceFunction<Event>() {
@@ -183,6 +267,17 @@ public class KeyedStateTest {
                     return null;
                 }
             }, Long.class));
+
+
+            //ttl 目前只支持处理时间
+            StateTtlConfig build = StateTtlConfig.newBuilder(Time.seconds(10L))
+                    .setUpdateType(StateTtlConfig.UpdateType.OnCreateAndWrite)
+                    .setStateVisibility(StateTtlConfig.StateVisibility.ReturnExpiredIfNotCleanedUp)
+                    .build();
+
+            myValueState.enableTimeToLive(build);
+
+
 
         }
 
@@ -238,6 +333,62 @@ public class KeyedStateTest {
 
             //清空状态
             timeState.clear();
+        }
+    }
+
+    private class FakeWindow extends KeyedProcessFunction<String, Event, String> {
+        Long windowSize = 0L;
+        MapState<Long, Long> mapState;
+
+        public FakeWindow(Long windowSize) {
+            this.windowSize = windowSize;
+        }
+
+        @Override
+        public void open(Configuration parameters) throws Exception {
+            mapState = getRuntimeContext().getMapState(new MapStateDescriptor<Long, Long>("keyed-state", Long.class, Long.class));
+        }
+
+        @Override
+        public void processElement(Event event, Context context, Collector<String> collector) throws Exception {
+
+            //根据时间戳判断属于哪个窗口
+
+            Long windowStart = event.getTimestamp() / windowSize * windowSize;
+            Long windowEnd = windowStart + windowSize;
+
+
+            //注册end-1的定时器
+            context.timerService().registerEventTimeTimer(windowEnd - 1);
+
+            //更新状态，进行增量聚合
+            if (mapState.contains(windowStart)) {
+                Long count = mapState.get(windowStart);
+                mapState.put(windowStart, count + 1);
+            } else {
+                mapState.put(windowStart, 1L);
+            }
+        }
+
+        @Override
+        public void onTimer(long timestamp, OnTimerContext ctx, Collector<String> out) throws Exception {
+            Long windowEnd = timestamp + 1;
+            Long windowStart = windowEnd - windowSize;
+            Long count = mapState.get(windowStart);
+
+            out.collect("窗口：" + new Timestamp(windowStart) + "~" + new Timestamp(windowEnd)
+                    + "  url：" + ctx.getCurrentKey() + "  count：" + count);
+
+            mapState.remove(windowStart);
+
+        }
+
+
+    }
+
+    private class MyRichFlatMapFunction<T, T1> {
+        public MyRichFlatMapFunction(long count) {
+
         }
     }
 }
