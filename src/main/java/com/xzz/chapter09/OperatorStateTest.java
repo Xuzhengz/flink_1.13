@@ -64,7 +64,6 @@ public class OperatorStateTest {
     private class BuffSink implements SinkFunction<Event>, CheckpointedFunction {
         final int buff;
         List<Event> buffElement;
-
         ListState<Event> checkpointState;
 
 

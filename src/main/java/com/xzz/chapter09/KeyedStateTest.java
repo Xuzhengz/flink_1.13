@@ -5,7 +5,6 @@ import com.xzz.chapter07.Event;
 import org.apache.flink.api.common.eventtime.SerializableTimestampAssigner;
 import org.apache.flink.api.common.eventtime.WatermarkStrategy;
 import org.apache.flink.api.common.functions.AggregateFunction;
-import org.apache.flink.api.common.functions.FlatMapFunction;
 import org.apache.flink.api.common.functions.ReduceFunction;
 import org.apache.flink.api.common.functions.RichFlatMapFunction;
 import org.apache.flink.api.common.state.*;
@@ -20,16 +19,10 @@ import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.KeyedProcessFunction;
 import org.apache.flink.streaming.api.functions.co.CoProcessFunction;
 import org.apache.flink.util.Collector;
-import org.junit.After;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.Test;
 
-import javax.xml.crypto.Data;
-import java.lang.reflect.Type;
 import java.sql.Timestamp;
 import java.time.Duration;
-import java.util.List;
 
 /**
  * @author 徐正洲
@@ -43,7 +36,11 @@ import java.util.List;
  * 4、reduceState：规约状态，输入输出类型需要一直
  * 5、aggregatingState：聚合状态
  */
-public class KeyedStateTest {
+public class
+
+
+
+KeyedStateTest {
     public static StreamExecutionEnvironment env = null;
     public static SingleOutputStreamOperator<Event> stream = null;
 
