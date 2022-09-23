@@ -57,7 +57,6 @@ public class StateBackendsTest {
     @Test
     public void test() throws Exception {
 
-
         env.execute();
     }
 }
