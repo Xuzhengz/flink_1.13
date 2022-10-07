@@ -34,7 +34,6 @@ public class FaultTolerance {
         }
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment(configuration);
         env.setParallelism(1);
-
         /**
          * 设置状态后端
          */
