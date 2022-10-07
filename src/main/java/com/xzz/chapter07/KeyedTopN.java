@@ -18,7 +18,7 @@ import java.time.Duration;
 /**
  * @author 徐正洲
  * @date 2022/9/19-21:14
- *
+ * <p>
  * 使用Keyed分组 统计TopN
  */
 public class KeyedTopN {
@@ -46,34 +46,35 @@ public class KeyedTopN {
 
         env.execute();
     }
-}
- class UrlCount implements AggregateFunction<Event, Long, Long> {
-    @Override
-    public Long createAccumulator() {
-        return 0L;
+
+    public static class UrlCount implements AggregateFunction<Event, Long, Long> {
+        @Override
+        public Long createAccumulator() {
+            return 0L;
+        }
+
+        @Override
+        public Long add(Event event, Long aLong) {
+            return aLong + 1;
+        }
+
+        @Override
+        public Long getResult(Long aLong) {
+            return aLong;
+        }
+
+        @Override
+        public Long merge(Long aLong, Long acc1) {
+            return acc1 + aLong;
+        }
     }
 
-    @Override
-    public Long add(Event event, Long aLong) {
-        return aLong + 1;
-    }
+    public static class UrlTopWindow extends ProcessWindowFunction<Long, Tuple2<String, Long>, String, TimeWindow> {
 
-    @Override
-    public Long getResult(Long aLong) {
-        return aLong;
-    }
-
-    @Override
-    public Long merge(Long aLong, Long acc1) {
-        return acc1 + aLong;
-    }
-}
-
- class UrlTopWindow extends ProcessWindowFunction<Long, Tuple2<String, Long>, String, TimeWindow> {
-
-    @Override
-    public void process(String s, Context context, Iterable<Long> iterable, Collector<Tuple2<String, Long>> collector) throws Exception {
-        Long count = iterable.iterator().next();
-        collector.collect(new Tuple2<>(s, count));
+        @Override
+        public void process(String s, Context context, Iterable<Long> iterable, Collector<Tuple2<String, Long>> collector) throws Exception {
+            Long count = iterable.iterator().next();
+            collector.collect(new Tuple2<>(s, count));
+        }
     }
 }

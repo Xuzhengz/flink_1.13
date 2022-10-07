@@ -1,6 +1,5 @@
-package com.xzz.example;
+package com.xzz.chapter10;
 
-import org.apache.flink.api.common.restartstrategy.RestartStrategies;
 import org.apache.flink.api.common.typeinfo.Types;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.configuration.Configuration;
@@ -12,13 +11,17 @@ import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
 import org.apache.flink.streaming.api.environment.CheckpointConfig;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.util.Collector;
-import org.apache.flink.util.StringUtils;
 
 /**
  * @author 徐正洲
  * @date 2022/8/26-16:03
+ *
+ * Flink 容错机制
+ * 1）flink内部开启checkpoint + exactly once
+ * 2）输入端：kafka
+ * 3）输出端：开启2阶段提交
  */
-public class StreamWordCount {
+public class FaultTolerance {
     public static void main(String[] args) throws Exception {
         /**
          * 启动时，还原至checkpoint的保存点
