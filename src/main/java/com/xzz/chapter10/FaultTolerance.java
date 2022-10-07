@@ -32,7 +32,6 @@ public class FaultTolerance {
         if (save != null && !"".equalsIgnoreCase(save.trim())) {
             configuration.setString("execution.savepoint.path", save);
         }
-
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment(configuration);
         env.setParallelism(1);
 
