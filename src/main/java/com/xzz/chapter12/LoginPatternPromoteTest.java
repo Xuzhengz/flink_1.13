@@ -58,7 +58,6 @@ public class LoginPatternPromoteTest {
                         return "fail".equals(loginEvent.getEvent());
                     }
                 }).times(3).consecutive(); //严格近邻 登录三次失败
-
         /**
          3、将模式应用在登录流中
          */
